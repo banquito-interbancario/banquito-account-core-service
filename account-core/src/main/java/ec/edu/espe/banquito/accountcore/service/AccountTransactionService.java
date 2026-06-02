@@ -1,6 +1,7 @@
 package ec.edu.espe.banquito.accountcore.service;
 
 import ec.edu.espe.banquito.accountcore.client.AccountingServiceClient;
+import ec.edu.espe.banquito.accountcore.client.PartyServiceClient;
 import ec.edu.espe.banquito.accountcore.dto.AccountingEntryReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditResponseDTO;
@@ -48,13 +49,16 @@ public class AccountTransactionService {
     private final AccountRepository accountRepository;
     private final AccountTransactionRepository transactionRepository;
     private final AccountingServiceClient accountingServiceClient;
+    private final PartyServiceClient partyServiceClient;
 
     public AccountTransactionService(AccountRepository accountRepository,
                                      AccountTransactionRepository transactionRepository,
-                                     AccountingServiceClient accountingServiceClient) {
+                                     AccountingServiceClient accountingServiceClient,
+                                     PartyServiceClient partyServiceClient) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.accountingServiceClient = accountingServiceClient;
+        this.partyServiceClient = partyServiceClient;
     }
 
     @Transactional(readOnly = true)
@@ -83,6 +87,7 @@ public class AccountTransactionService {
 
         Account account = getAccountForUpdate(request.accountId());
         validateActiveAccount(account);
+        partyServiceClient.validateActiveCustomer(account.getCustomerId());
 
         credit(account, request.amount());
         accountRepository.save(account);
@@ -118,6 +123,7 @@ public class AccountTransactionService {
 
         Account account = getAccountForUpdate(request.accountId());
         validateActiveAccount(account);
+        partyServiceClient.validateActiveCustomer(account.getCustomerId());
         validateSufficientBalance(account, request.amount());
 
         debit(account, request.amount());
@@ -161,6 +167,8 @@ public class AccountTransactionService {
 
         validateActiveAccount(sourceAccount);
         validateActiveAccount(destinationAccount);
+        partyServiceClient.validateActiveCustomer(sourceAccount.getCustomerId());
+        partyServiceClient.validateActiveCustomer(destinationAccount.getCustomerId());
         validateSufficientBalance(sourceAccount, request.amount());
 
         debit(sourceAccount, request.amount());
@@ -204,7 +212,7 @@ public class AccountTransactionService {
                 debitTransaction.getTransactionUuid(),
                 sourceAccount.getAvailableBalance(),
                 destinationAccount.getAccountNumber(),
-                "N/A",
+                partyServiceClient.getHolderNameByAccount(destinationAccount.getAccountNumber()),
                 debitTransaction.getStatus(),
                 debitTransaction.getAccountingDate()
         );
@@ -219,6 +227,7 @@ public class AccountTransactionService {
 
             Account account = getAccountForUpdate(creditItem.accountId());
             validateActiveAccount(account);
+            partyServiceClient.validateActiveCustomer(account.getCustomerId());
 
             credit(account, creditItem.amount());
             accountRepository.save(account);
@@ -261,6 +270,7 @@ public class AccountTransactionService {
 
         Account account = getAccountForUpdate(request.accountId());
         validateActiveAccount(account);
+        partyServiceClient.validateActiveCustomer(account.getCustomerId());
 
         BigDecimal ivaAmount = request.commissionAmount()
                 .multiply(IVA_RATE)

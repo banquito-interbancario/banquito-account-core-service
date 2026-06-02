@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package banquito.accountcore.v2;
+
+option java_multiple_files = true;
+option java_package = "ec.edu.espe.banquito.accountcore.grpc.accountcore";
+option java_outer_classname = "AccountCoreServiceProto";
+
+service AccountCoreService {
+  rpc BatchCredit(BatchCreditRequest) returns (BatchCreditResponse);
+  rpc CorporateDebit(CorporateDebitRequest) returns (CorporateDebitResponse);
+}
+
+message BatchCreditRequest {
+  string batch_id = 1;
+  repeated CreditItem credits = 2;
+}
+
+message CreditItem {
+  int64 account_id = 1;
+  string amount = 2;
+  string reference = 3;
+  string transaction_uuid = 4;
+}
+
+message BatchCreditResponse {
+  string batch_id = 1;
+  int32 processed = 2;
+  int32 failed = 3;
+  repeated BatchCreditResult results = 4;
+}
+
+message BatchCreditResult {
+  int64 account_id = 1;
+  string status = 2;
+  string transaction_id = 3;
+}
+
+message CorporateDebitRequest {
+  int64 account_id = 1;
+  string total_amount = 2;
+  string commission_amount = 3;
+  string batch_id = 4;
+  string transaction_uuid = 5;
+}
+
+message CorporateDebitResponse {
+  string transaction_id = 1;
+  string debited_amount = 2;
+  string commission_net = 3;
+  string iva_amount = 4;
+  string status = 5;
+  string accounting_date = 6;
+}

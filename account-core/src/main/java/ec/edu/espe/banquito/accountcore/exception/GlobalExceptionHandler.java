@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.client.RestClientException;
+import io.grpc.StatusRuntimeException;
 
 import java.util.Map;
 
@@ -40,9 +40,9 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", message));
     }
 
-    @ExceptionHandler(RestClientException.class)
-    public ResponseEntity<Map<String, String>> handleAccountingUnavailable(RestClientException exception) {
+    @ExceptionHandler(StatusRuntimeException.class)
+    public ResponseEntity<Map<String, String>> handleAccountingUnavailable(StatusRuntimeException exception) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(Map.of("error", "Accounting service is unavailable", "details", exception.getMessage()));
+                .body(Map.of("error", "Accounting gRPC service is unavailable", "details", exception.getStatus().toString()));
     }
 }

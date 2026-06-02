@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package banquito.party.v2;
+
+option java_multiple_files = true;
+option java_package = "ec.edu.espe.banquito.accountcore.grpc.party";
+option java_outer_classname = "PartyServiceProto";
+
+service PartyService {
+  rpc GetCustomer(GetCustomerRequest) returns (CustomerResponse);
+  rpc GetCustomerByAccount(GetCustomerByAccountRequest) returns (AccountHolderResponse);
+}
+
+message GetCustomerRequest {
+  int64 customer_id = 1;
+}
+
+message GetCustomerByAccountRequest {
+  string account_number = 1;
+}
+
+message CustomerResponse {
+  int64 customer_id = 1;
+  string customer_type = 2;
+  string identification = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string email = 6;
+  string status = 7;
+}
+
+message AccountHolderResponse {
+  int64 account_id = 1;
+  string account_number = 2;
+  string holder_name = 3;
+  string holder_identification = 4;
+  string account_type = 5;
+  string status = 6;
+}

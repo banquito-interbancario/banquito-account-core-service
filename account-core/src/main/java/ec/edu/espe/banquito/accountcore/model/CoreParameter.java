@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "core_parameter")
+@Table(name = "CORE_PARAMETER")
 @Getter
 @Setter
 public class CoreParameter {
