@@ -65,6 +65,42 @@ Errores relevantes:
 
 - `404`: cuenta no encontrada.
 
+### GET `/api/v2/accounts/customer/{customerId}`
+
+Lista las cuentas asociadas a un cliente para seleccionar la cuenta origen.
+
+Consumidores esperados:
+
+- Banca Web Personas.
+- Frontend o BFF autenticado que ya resolvio el `customerId` del cliente logueado.
+
+Path params:
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---:|---:|---|
+| `customerId` | Long | Si | ID del cliente administrado por `party-service`. |
+
+Respuesta `200 OK`:
+
+```json
+[
+  {
+    "accountId": 1,
+    "accountNumber": "2200000001",
+    "customerId": 2,
+    "status": "ACTIVE",
+    "availableBalance": 1200.00,
+    "accountingBalance": 1200.00,
+    "currency": "USD"
+  }
+]
+```
+
+Notas:
+
+- Si el cliente no tiene cuentas, devuelve lista vacia `[]`.
+- El endpoint no resuelve datos personales del cliente; esa informacion le corresponde a `party-service`.
+
 ### GET `/api/v2/accounts/{accountId}/transactions`
 
 Consulta historial paginado de movimientos recientes de una cuenta.
@@ -241,12 +277,22 @@ Request:
 ```json
 {
   "originAccountId": 1,
-  "destinationAccountNumber": "220002",
+  "destinationAccountNumber": "2200000002",
   "amount": 300.00,
-  "transactionUuid": "uuid",
+  "transactionUuid": "8df67f8d-2a8c-4d61-94d5-88a6044b54ad",
   "reference": "Pago arriendo"
 }
 ```
+
+Campos:
+
+| Campo | Tipo | Requerido | Descripcion |
+|---|---:|---:|---|
+| `originAccountId` | Long | Si | ID interno de la cuenta origen seleccionada desde `/api/v2/accounts/customer/{customerId}`. |
+| `destinationAccountNumber` | String | Si | Numero de cuenta destino validado previamente por `party-service` usando gRPC contra Oscar. |
+| `amount` | Decimal | Si | Monto mayor a cero. |
+| `transactionUuid` | String | Si | Identificador unico generado por el frontend/BFF para idempotencia. |
+| `reference` | String | No | Concepto visible de la transferencia. |
 
 Respuesta `200 OK`:
 

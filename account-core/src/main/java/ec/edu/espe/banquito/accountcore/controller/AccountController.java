@@ -1,5 +1,6 @@
 package ec.edu.espe.banquito.accountcore.controller;
 
+import ec.edu.espe.banquito.accountcore.dto.AccountSummaryResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.BalanceResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.HealthResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.OperationResponseDTO;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v2/accounts")
@@ -45,6 +47,26 @@ public class AccountController {
     public AccountController(AccountRepository accountRepository, AccountTransactionService transactionService) {
         this.accountRepository = accountRepository;
         this.transactionService = transactionService;
+    }
+
+    @GetMapping("/customer/{customerId}")
+    @Operation(summary = "List accounts by customer", description = "Returns the accounts owned by a customer so clients can select the origin account.")
+    @ApiResponse(responseCode = "200", description = "Accounts returned")
+    public ResponseEntity<List<AccountSummaryResponseDTO>> getAccountsByCustomer(
+            @Parameter(description = "Customer identifier managed by party-service", example = "2")
+            @PathVariable Long customerId) {
+        List<AccountSummaryResponseDTO> accounts = accountRepository.findByCustomerIdOrderByAccountNumberAsc(customerId).stream()
+                .map(account -> new AccountSummaryResponseDTO(
+                        account.getId(),
+                        account.getAccountNumber(),
+                        account.getCustomerId(),
+                        account.getStatus(),
+                        account.getAvailableBalance(),
+                        account.getAccountingBalance(),
+                        CURRENCY
+                ))
+                .toList();
+        return ResponseEntity.ok(accounts);
     }
 
     @GetMapping("/{accountId}/balance")
