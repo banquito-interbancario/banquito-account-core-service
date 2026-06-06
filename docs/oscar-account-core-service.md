@@ -29,6 +29,49 @@ No es responsabilidad de este microservicio:
 
 Estos endpoints son los que consumen Kong, frontends u otros micros segun la matriz de endpoints.
 
+### POST `/api/v2/auth/login/staff`
+
+Autentica un usuario operativo de ventanilla registrado en `CORE_USER`.
+
+Consumidor esperado:
+
+- Frontend de Ventanilla.
+
+Request:
+
+```json
+{
+  "username": "cajero.norte",
+  "password": "banquito2026"
+}
+```
+
+Respuesta `200 OK`:
+
+```json
+{
+  "id": 2,
+  "username": "cajero.norte",
+  "name": "Carlos Ruiz",
+  "role": "CAJERO",
+  "branchId": 1,
+  "branchCode": "NORTE",
+  "status": "ACTIVO"
+}
+```
+
+Validaciones:
+
+- El usuario debe existir en `CORE_USER`.
+- El usuario debe tener `role = CAJERO`.
+- El usuario debe tener `status = ACTIVO`.
+- La contrasena se valida contra `password_hash` usando BCrypt.
+
+Errores relevantes:
+
+- `400`: request invalido.
+- `401`: credenciales invalidas, usuario inactivo o usuario no cajero.
+
 ### GET `/api/v2/accounts/{accountId}/balance`
 
 Consulta saldo disponible y saldo contable de una cuenta.

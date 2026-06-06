@@ -24,6 +24,12 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", exception.getMessage()));
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidCredentials(InvalidCredentialsException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", exception.getMessage()));
+    }
+
     @ExceptionHandler({InactiveAccountException.class, InsufficientBalanceException.class, IllegalArgumentException.class})
     public ResponseEntity<Map<String, String>> handleBusinessException(RuntimeException exception) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

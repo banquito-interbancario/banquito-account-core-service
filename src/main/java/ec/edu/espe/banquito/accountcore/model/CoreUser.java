@@ -29,6 +29,12 @@ public class CoreUser {
     @Column(name = "status", nullable = false, length = 15)
     private String status;
 
+    @Column(name = "branch_id")
+    private Integer branchId;
+
+    @Column(name = "branch_code", length = 20)
+    private String branchCode;
+
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
