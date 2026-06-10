@@ -1,0 +1,6 @@
+# code;superType;name;description
+AHO_PERSONAL;AHORROS;Ahorros Personal;Cuenta de ahorros para persona natural
+CTE_PERSONAL;CORRIENTE;Corriente Personal;Cuenta corriente para persona natural
+CTE_OPERATIVA;CORRIENTE;Corriente Operativa;Cuenta operativa empresarial
+AHO_NOMINA;AHORROS;Ahorros Nomina;Cuenta para dispersion de nomina
+AHO_IMPUESTOS;AHORROS;Ahorros Impuestos;Cuenta para retencion de impuestos

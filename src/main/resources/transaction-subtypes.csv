@@ -1,0 +1,7 @@
+# code;name
+DEP_VEN;Deposito Ventanilla
+RET_VEN;Retiro Ventanilla
+TRF_P2P_S;Transferencia P2P Salida
+TRF_P2P_E;Transferencia P2P Entrada
+PAG_NOM_C;Pago Nomina Credito On-Us
+DEB_EMP;Debito Corporativo
