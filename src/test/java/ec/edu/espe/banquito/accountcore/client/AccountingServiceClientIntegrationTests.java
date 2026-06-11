@@ -25,9 +25,9 @@ class AccountingServiceClientIntegrationTests {
                             LocalDate.now(),
                             List.of(
                                     new AccountingEntryReqDTO.JournalLineDTO(
-                                            "1.1.0.02", "DEBIT", new BigDecimal("10.00"), entryUuid),
+                                            "1.1.0.02", "DEBITO", new BigDecimal("10.00"), entryUuid),
                                     new AccountingEntryReqDTO.JournalLineDTO(
-                                            "2.1.0.01", "CREDIT", new BigDecimal("10.00"), entryUuid)
+                                            "2.1.0.01", "CREDITO", new BigDecimal("10.00"), entryUuid)
                             )
                     ))
             );

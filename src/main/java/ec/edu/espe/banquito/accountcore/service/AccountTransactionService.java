@@ -2,6 +2,7 @@ package ec.edu.espe.banquito.accountcore.service;
 
 import ec.edu.espe.banquito.accountcore.client.AccountingServiceClient;
 import ec.edu.espe.banquito.accountcore.client.PartyServiceClient;
+import ec.edu.espe.banquito.accountcore.config.AccountingRulesProperties;
 import ec.edu.espe.banquito.accountcore.dto.AccountingEntryReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditResponseDTO;
@@ -42,28 +43,25 @@ import java.util.List;
 @Service
 public class AccountTransactionService {
 
-    private static final String VAULT_ACCOUNT_CODE = "1.1.0.02";
-    private static final String PAYMENT_CLEARING_ACCOUNT_CODE = "2.3.0.01";
-    private static final String SERVICE_INCOME_ACCOUNT_CODE = "4.1.0.01";
-    private static final String VAT_PAYABLE_ACCOUNT_CODE = "2.2.0.01";
-    private static final BigDecimal IVA_RATE = new BigDecimal("0.15");
-
     private final AccountRepository accountRepository;
     private final AccountTransactionRepository transactionRepository;
     private final TransactionSubtypeRepository transactionSubtypeRepository;
     private final AccountingServiceClient accountingServiceClient;
     private final PartyServiceClient partyServiceClient;
+    private final AccountingRulesProperties accountingRules;
 
     public AccountTransactionService(AccountRepository accountRepository,
                                      AccountTransactionRepository transactionRepository,
                                      TransactionSubtypeRepository transactionSubtypeRepository,
                                      AccountingServiceClient accountingServiceClient,
-                                     PartyServiceClient partyServiceClient) {
+                                     PartyServiceClient partyServiceClient,
+                                     AccountingRulesProperties accountingRules) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.transactionSubtypeRepository = transactionSubtypeRepository;
         this.accountingServiceClient = accountingServiceClient;
         this.partyServiceClient = partyServiceClient;
+        this.accountingRules = accountingRules;
     }
 
     @Transactional(readOnly = true)
@@ -116,7 +114,7 @@ public class AccountTransactionService {
                 "Teller deposit account " + account.getId(),
                 accountingDate,
                 List.of(
-                        journalLine(VAULT_ACCOUNT_CODE, TransactionType.DEBITO, request.amount(), request.transactionUuid()),
+                        journalLine(accountingRules.vaultAccountCode(), TransactionType.DEBITO, request.amount(), request.transactionUuid()),
                         journalLine(getCustomerLiabilityAccountCode(account), TransactionType.CREDITO, request.amount(), request.transactionUuid())
                 )
         ));
@@ -156,7 +154,7 @@ public class AccountTransactionService {
                 accountingDate,
                 List.of(
                         journalLine(getCustomerLiabilityAccountCode(account), TransactionType.DEBITO, request.amount(), request.transactionUuid()),
-                        journalLine(VAULT_ACCOUNT_CODE, TransactionType.CREDITO, request.amount(), request.transactionUuid())
+                        journalLine(accountingRules.vaultAccountCode(), TransactionType.CREDITO, request.amount(), request.transactionUuid())
                 )
         ));
 
@@ -264,7 +262,7 @@ public class AccountTransactionService {
                     "Batch credit " + request.batchId() + " account " + account.getId(),
                     accountingDate,
                     List.of(
-                            journalLine(PAYMENT_CLEARING_ACCOUNT_CODE, TransactionType.DEBITO, creditItem.amount(), request.batchId()),
+                            journalLine(accountingRules.paymentClearingAccountCode(), TransactionType.DEBITO, creditItem.amount(), request.batchId()),
                             journalLine(getCustomerLiabilityAccountCode(account), TransactionType.CREDITO, creditItem.amount(), creditItem.transactionUuid())
                     )
             ));
@@ -288,8 +286,8 @@ public class AccountTransactionService {
         partyServiceClient.validateActiveCustomer(account.getCustomerId());
 
         BigDecimal ivaAmount = request.commissionAmount()
-                .multiply(IVA_RATE)
-                .divide(BigDecimal.ONE.add(IVA_RATE), 2, RoundingMode.HALF_UP);
+                .multiply(accountingRules.ivaRate())
+                .divide(BigDecimal.ONE.add(accountingRules.ivaRate()), 2, RoundingMode.HALF_UP);
         BigDecimal commissionNet = request.commissionAmount().subtract(ivaAmount);
         BigDecimal debitedAmount = request.totalAmount().add(request.commissionAmount());
         validateSufficientBalance(account, debitedAmount);
@@ -317,9 +315,9 @@ public class AccountTransactionService {
                 accountingDate,
                 List.of(
                         journalLine(getCustomerLiabilityAccountCode(account), TransactionType.DEBITO, debitedAmount, request.transactionUuid()),
-                        journalLine(PAYMENT_CLEARING_ACCOUNT_CODE, TransactionType.CREDITO, request.totalAmount(), request.batchId()),
-                        journalLine(SERVICE_INCOME_ACCOUNT_CODE, TransactionType.CREDITO, commissionNet, request.transactionUuid()),
-                        journalLine(VAT_PAYABLE_ACCOUNT_CODE, TransactionType.CREDITO, ivaAmount, request.transactionUuid())
+                        journalLine(accountingRules.paymentClearingAccountCode(), TransactionType.CREDITO, request.totalAmount(), request.batchId()),
+                        journalLine(accountingRules.serviceIncomeAccountCode(), TransactionType.CREDITO, commissionNet, request.transactionUuid()),
+                        journalLine(accountingRules.vatPayableAccountCode(), TransactionType.CREDITO, ivaAmount, request.transactionUuid())
                 )
         ));
 
