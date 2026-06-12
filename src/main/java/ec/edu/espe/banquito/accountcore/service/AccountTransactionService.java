@@ -37,11 +37,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class AccountTransactionService {
+
+    private static final ZoneId BANK_ZONE = ZoneId.of("America/Guayaquil");
 
     private final AccountRepository accountRepository;
     private final AccountTransactionRepository transactionRepository;
@@ -95,7 +98,7 @@ public class AccountTransactionService {
         credit(account, request.amount());
         accountRepository.save(account);
 
-        LocalDate accountingDate = LocalDate.now();
+        LocalDate accountingDate = LocalDate.now(BANK_ZONE);
         AccountTransaction transaction = transactionRepository.save(createTransaction(
                 account,
                 new TransactionCreationData(
@@ -134,7 +137,7 @@ public class AccountTransactionService {
         debit(account, request.amount());
         accountRepository.save(account);
 
-        LocalDate accountingDate = LocalDate.now();
+        LocalDate accountingDate = LocalDate.now(BANK_ZONE);
         AccountTransaction transaction = transactionRepository.save(createTransaction(
                 account,
                 new TransactionCreationData(
@@ -183,7 +186,7 @@ public class AccountTransactionService {
         accountRepository.save(sourceAccount);
         accountRepository.save(destinationAccount);
 
-        LocalDate accountingDate = LocalDate.now();
+        LocalDate accountingDate = LocalDate.now(BANK_ZONE);
         AccountTransaction debitTransaction = transactionRepository.save(createTransaction(
                 sourceAccount,
                 new TransactionCreationData(
@@ -243,7 +246,7 @@ public class AccountTransactionService {
             credit(account, creditItem.amount());
             accountRepository.save(account);
 
-            LocalDate accountingDate = LocalDate.now();
+            LocalDate accountingDate = LocalDate.now(BANK_ZONE);
             transactionRepository.save(createTransaction(
                     account,
                     new TransactionCreationData(
@@ -295,7 +298,7 @@ public class AccountTransactionService {
         debit(account, debitedAmount);
         accountRepository.save(account);
 
-        LocalDate accountingDate = LocalDate.now();
+        LocalDate accountingDate = LocalDate.now(BANK_ZONE);
         AccountTransaction transaction = transactionRepository.save(createTransaction(
                 account,
                 new TransactionCreationData(
@@ -332,7 +335,7 @@ public class AccountTransactionService {
     }
 
     private void validateIdempotency(String transactionUuid) {
-        LocalDateTime from = LocalDateTime.now().minusDays(1);
+        LocalDateTime from = LocalDateTime.now(BANK_ZONE).minusDays(1);
         if (transactionRepository.existsByTransactionUuidAndTransactionDateAfter(transactionUuid, from)) {
             throw new DuplicateTransactionException(transactionUuid);
         }
@@ -377,7 +380,6 @@ public class AccountTransactionService {
         transaction.setMovementType(data.transactionType());
         transaction.setTransactionSubtype(getTransactionSubtype(data.transactionSubtype()));
         transaction.setTransactionUuid(data.transactionUuid());
-        transaction.setTransactionDate(LocalDateTime.now());
         transaction.setAccountingDate(data.accountingDate());
         transaction.setResultingBalance(data.resultingBalance());
         transaction.setStatus(TransactionStatus.COMPLETADA);
@@ -404,7 +406,10 @@ public class AccountTransactionService {
 
     private String getCustomerLiabilityAccountCode(Account account) {
         AccountSuperType superType = account.getAccountSubtype().getSuperType();
-        return superType == AccountSuperType.AHORROS ? "2.1.0.01" : "2.1.0.02";
+        return switch (superType) {
+            case AHORROS -> accountingRules.savingsLiabilityAccountCode();
+            case CORRIENTE -> accountingRules.checkingLiabilityAccountCode();
+        };
     }
 
     private TransactionSubtype getTransactionSubtype(TransactionSubtypeCode subtypeCode) {

@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +30,7 @@ class CalendarQueryServiceTests {
 
     @Test
     void shouldReturnRegisteredHoliday() {
-        LocalDate date = LocalDate.of(2026, 12, 25);
+        LocalDate date = LocalDate.of(2026, Month.DECEMBER, 25);
         Holiday holiday = new Holiday();
         holiday.setHolidayDate(date);
         holiday.setName("Navidad");
@@ -45,7 +46,7 @@ class CalendarQueryServiceTests {
 
     @Test
     void shouldReturnFalseWhenDateIsNotRegistered() {
-        LocalDate date = LocalDate.of(2026, 12, 24);
+        LocalDate date = LocalDate.of(2026, Month.DECEMBER, 24);
         when(holidayRepository.findById(date)).thenReturn(Optional.empty());
 
         HolidayCheckResponseDTO response = calendarQueryService.checkHoliday(date);

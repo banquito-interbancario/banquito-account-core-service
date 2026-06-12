@@ -5,9 +5,13 @@ import ec.edu.espe.banquito.accountcore.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.Hibernate;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "ACCOUNT_TRANSACTION")
@@ -48,6 +52,7 @@ public class AccountTransaction {
     private TransactionStatus status;
 
     @Column(name = "transaction_date", nullable = false)
+    @CreationTimestamp
     private LocalDateTime transactionDate;
 
     @Column(name = "accounting_date", nullable = false)
@@ -56,4 +61,42 @@ public class AccountTransaction {
     @Version
     @Column(name = "version", nullable = false)
     private Integer version;
+
+    public AccountTransaction() {
+    }
+
+    public AccountTransaction(Long id) {
+        this.id = id;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || Hibernate.getClass(this) != Hibernate.getClass(object)) {
+            return false;
+        }
+        AccountTransaction transaction = (AccountTransaction) object;
+        return id != null && Objects.equals(id, transaction.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Hibernate.getClass(this).hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "AccountTransaction{" +
+                "id=" + id +
+                ", transactionUuid='" + transactionUuid + '\'' +
+                ", movementType=" + movementType +
+                ", amount=" + amount +
+                ", resultingBalance=" + resultingBalance +
+                ", status=" + status +
+                ", transactionDate=" + transactionDate +
+                ", accountingDate=" + accountingDate +
+                '}';
+    }
 }

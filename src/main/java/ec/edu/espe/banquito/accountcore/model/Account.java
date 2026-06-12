@@ -4,9 +4,15 @@ import ec.edu.espe.banquito.accountcore.enums.AccountStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.Hibernate;
+import org.hibernate.annotations.NaturalId;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "ACCOUNT")
@@ -22,6 +28,7 @@ public class Account {
     private Long customerId;
 
     @Column(name = "account_number", unique = true, nullable = false, length = 20)
+    @NaturalId
     private String accountNumber;
 
     @Column(name = "branch_id", nullable = false)
@@ -45,25 +52,53 @@ public class Account {
     private Boolean favorite;
 
     @Column(name = "opening_date", nullable = false)
+    @CreationTimestamp
     private LocalDate openingDate;
 
     @Column(name = "last_update", nullable = false)
+    @UpdateTimestamp
     private LocalDateTime lastUpdate;
 
     @Version
     @Column(name = "version", nullable = false)
     private Integer version;
 
-    @PrePersist
-    protected void onCreate() {
-        if (this.openingDate == null) {
-            this.openingDate = LocalDate.now();
-        }
-        this.lastUpdate = LocalDateTime.now();
+    public Account() {
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        this.lastUpdate = LocalDateTime.now();
+    public Account(Long id) {
+        this.id = id;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || Hibernate.getClass(this) != Hibernate.getClass(object)) {
+            return false;
+        }
+        Account account = (Account) object;
+        return id != null && Objects.equals(id, account.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Hibernate.getClass(this).hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "Account{" +
+                "id=" + id +
+                ", customerId=" + customerId +
+                ", accountNumber='" + accountNumber + '\'' +
+                ", branchId=" + branchId +
+                ", availableBalance=" + availableBalance +
+                ", accountingBalance=" + accountingBalance +
+                ", status=" + status +
+                ", favorite=" + favorite +
+                ", openingDate=" + openingDate +
+                '}';
     }
 }

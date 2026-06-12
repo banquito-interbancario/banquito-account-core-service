@@ -6,6 +6,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -22,7 +23,7 @@ class AccountingServiceClientIntegrationTests {
             assertDoesNotThrow(() -> client.registerEntry(new AccountingEntryReqDTO(
                             entryUuid,
                             "Integration test from account-core-service",
-                            LocalDate.now(),
+                            LocalDate.of(2026, Month.JUNE, 11),
                             List.of(
                                     new AccountingEntryReqDTO.JournalLineDTO(
                                             "1.1.0.02", "DEBITO", new BigDecimal("10.00"), entryUuid),

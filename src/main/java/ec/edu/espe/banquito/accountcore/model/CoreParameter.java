@@ -3,7 +3,11 @@ package ec.edu.espe.banquito.accountcore.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.Hibernate;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "CORE_PARAMETER")
@@ -28,15 +32,45 @@ public class CoreParameter {
     private String description;
 
     @Column(name = "last_update", nullable = false)
+    @UpdateTimestamp
     private LocalDateTime lastUpdate;
 
     @Version
     @Column(name = "version", nullable = false)
     private Integer version;
 
-    @PrePersist
-    @PreUpdate
-    protected void onSave() {
-        this.lastUpdate = LocalDateTime.now();
+    public CoreParameter() {
+    }
+
+    public CoreParameter(String code) {
+        this.code = code;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || Hibernate.getClass(this) != Hibernate.getClass(object)) {
+            return false;
+        }
+        CoreParameter parameter = (CoreParameter) object;
+        return code != null && Objects.equals(code, parameter.code);
+    }
+
+    @Override
+    public int hashCode() {
+        return Hibernate.getClass(this).hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "CoreParameter{" +
+                "code='" + code + '\'' +
+                ", name='" + name + '\'' +
+                ", valueString='" + valueString + '\'' +
+                ", dataType='" + dataType + '\'' +
+                ", lastUpdate=" + lastUpdate +
+                '}';
     }
 }

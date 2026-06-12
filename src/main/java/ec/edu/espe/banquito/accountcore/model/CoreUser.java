@@ -3,7 +3,12 @@ package ec.edu.espe.banquito.accountcore.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.Hibernate;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.NaturalId;
+
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "CORE_USER")
@@ -15,6 +20,7 @@ public class CoreUser {
     private Integer id;
 
     @Column(name = "username", nullable = false, unique = true, length = 50)
+    @NaturalId
     private String username;
 
     @Column(name = "password_hash", nullable = false, length = 255)
@@ -39,14 +45,48 @@ public class CoreUser {
     private LocalDateTime lastLogin;
 
     @Column(name = "creation_date", nullable = false)
+    @CreationTimestamp
     private LocalDateTime creationDate;
 
     @Version
     @Column(name = "version", nullable = false)
     private Integer version;
 
-    @PrePersist
-    protected void onCreate() {
-        this.creationDate = LocalDateTime.now();
+    public CoreUser() {
+    }
+
+    public CoreUser(Integer id) {
+        this.id = id;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || Hibernate.getClass(this) != Hibernate.getClass(object)) {
+            return false;
+        }
+        CoreUser user = (CoreUser) object;
+        return id != null && Objects.equals(id, user.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Hibernate.getClass(this).hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "CoreUser{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                ", fullName='" + fullName + '\'' +
+                ", role='" + role + '\'' +
+                ", status='" + status + '\'' +
+                ", branchId=" + branchId +
+                ", branchCode='" + branchCode + '\'' +
+                ", lastLogin=" + lastLogin +
+                '}';
     }
 }

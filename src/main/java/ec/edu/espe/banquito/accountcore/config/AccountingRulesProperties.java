@@ -16,5 +16,7 @@ public record AccountingRulesProperties(
         @NotBlank String paymentClearingAccountCode,
         @NotBlank String serviceIncomeAccountCode,
         @NotBlank String vatPayableAccountCode,
+        @NotBlank String savingsLiabilityAccountCode,
+        @NotBlank String checkingLiabilityAccountCode,
         @NotNull @DecimalMin("0.0") @DecimalMax("1.0") BigDecimal ivaRate
 ) {}

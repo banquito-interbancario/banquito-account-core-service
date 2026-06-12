@@ -10,12 +10,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 public class CoreUserAuthService {
 
     private static final String ACTIVE_STATUS = "ACTIVO";
     private static final String TELLER_ROLE = "CAJERO";
+    private static final ZoneId BANK_ZONE = ZoneId.of("America/Guayaquil");
 
     private final CoreUserRepository coreUserRepository;
 
@@ -32,7 +34,7 @@ public class CoreUserAuthService {
             throw new InvalidCredentialsException();
         }
 
-        coreUser.setLastLogin(LocalDateTime.now());
+        coreUser.setLastLogin(LocalDateTime.now(BANK_ZONE));
         coreUserRepository.save(coreUser);
 
         return new StaffLoginResponseDTO(
