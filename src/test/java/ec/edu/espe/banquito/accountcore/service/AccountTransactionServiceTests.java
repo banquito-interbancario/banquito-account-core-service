@@ -3,13 +3,15 @@ package ec.edu.espe.banquito.accountcore.service;
 import ec.edu.espe.banquito.accountcore.client.AccountingServiceClient;
 import ec.edu.espe.banquito.accountcore.client.PartyServiceClient;
 import ec.edu.espe.banquito.accountcore.config.AccountingRulesProperties;
-import ec.edu.espe.banquito.accountcore.dto.AccountingEntryReqDTO;
+import ec.edu.espe.banquito.accountcore.dto.AccountingOperationReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.CorporateDebitReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.TellerTransactionReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.TransferP2PReqDTO;
 import ec.edu.espe.banquito.accountcore.enums.AccountStatus;
 import ec.edu.espe.banquito.accountcore.enums.AccountSuperType;
+import ec.edu.espe.banquito.accountcore.enums.AccountingOperationType;
+import ec.edu.espe.banquito.accountcore.enums.AccountingProductType;
 import ec.edu.espe.banquito.accountcore.enums.TransactionStatus;
 import ec.edu.espe.banquito.accountcore.enums.TransactionType;
 import ec.edu.espe.banquito.accountcore.exception.AccountNotFoundException;
@@ -67,12 +69,6 @@ class AccountTransactionServiceTests {
     @BeforeEach
     void setUp() {
         AccountingRulesProperties rules = new AccountingRulesProperties(
-                "1.1.0.02",
-                "2.3.0.01",
-                "4.1.0.01",
-                "2.2.0.01",
-                "2.1.0.01",
-                "2.1.0.02",
                 new BigDecimal("0.15")
         );
         service = new AccountTransactionService(
@@ -131,10 +127,10 @@ class AccountTransactionServiceTests {
         assertEquals(new BigDecimal("125.00"), response.newBalance());
         assertEquals(TransactionStatus.COMPLETADA, response.status());
         verify(partyServiceClient).validateActiveCustomer(1L);
-        AccountingEntryReqDTO entry = capturedAccountingEntry();
-        assertEquals("1.1.0.02", entry.lines().get(0).accountCode());
-        assertEquals("DEBITO", entry.lines().get(0).movementType());
-        assertEquals("2.1.0.01", entry.lines().get(1).accountCode());
+        AccountingOperationReqDTO operation = capturedAccountingOperation();
+        assertEquals(AccountingOperationType.TELLER_DEPOSIT, operation.operationType());
+        assertEquals(AccountingProductType.SAVINGS, operation.accountProductType());
+        assertEquals(new BigDecimal("25.00"), operation.amount());
     }
 
     @Test
@@ -147,9 +143,9 @@ class AccountTransactionServiceTests {
         );
 
         assertEquals(new BigDecimal("70.00"), response.newBalance());
-        AccountingEntryReqDTO entry = capturedAccountingEntry();
-        assertEquals("2.1.0.02", entry.lines().get(0).accountCode());
-        assertEquals("CREDITO", entry.lines().get(1).movementType());
+        AccountingOperationReqDTO operation = capturedAccountingOperation();
+        assertEquals(AccountingOperationType.TELLER_WITHDRAWAL, operation.operationType());
+        assertEquals(AccountingProductType.CHECKING, operation.accountProductType());
     }
 
     @Test
@@ -167,9 +163,10 @@ class AccountTransactionServiceTests {
         assertEquals(new BigDecimal("60.00"), response.originNewBalance());
         assertEquals("Juan Lopez", response.destinationHolderName());
         assertEquals(new BigDecimal("60.00"), destination.getAvailableBalance());
-        AccountingEntryReqDTO entry = capturedAccountingEntry();
-        assertEquals("2.1.0.01", entry.lines().get(0).accountCode());
-        assertEquals("2.1.0.02", entry.lines().get(1).accountCode());
+        AccountingOperationReqDTO operation = capturedAccountingOperation();
+        assertEquals(AccountingOperationType.P2P_TRANSFER, operation.operationType());
+        assertEquals(AccountingProductType.SAVINGS, operation.accountProductType());
+        assertEquals(BigDecimal.ZERO, operation.commissionAmount());
     }
 
     @Test
@@ -193,7 +190,7 @@ class AccountTransactionServiceTests {
         assertEquals(0, response.failed());
         assertEquals(new BigDecimal("110.00"), savings.getAvailableBalance());
         assertEquals(new BigDecimal("220.00"), current.getAvailableBalance());
-        verify(accountingServiceClient, org.mockito.Mockito.times(2)).registerEntry(any());
+        verify(accountingServiceClient, org.mockito.Mockito.times(2)).postOperation(any());
     }
 
     @Test
@@ -213,11 +210,11 @@ class AccountTransactionServiceTests {
         assertEquals(new BigDecimal("10.00"), response.commissionNet());
         assertEquals(new BigDecimal("1.50"), response.ivaAmount());
         assertEquals(new BigDecimal("888.50"), account.getAvailableBalance());
-        AccountingEntryReqDTO entry = capturedAccountingEntry();
-        assertEquals(4, entry.lines().size());
-        assertEquals("2.3.0.01", entry.lines().get(1).accountCode());
-        assertEquals("4.1.0.01", entry.lines().get(2).accountCode());
-        assertEquals("2.2.0.01", entry.lines().get(3).accountCode());
+        AccountingOperationReqDTO operation = capturedAccountingOperation();
+        assertEquals(AccountingOperationType.CORPORATE_DEBIT, operation.operationType());
+        assertEquals(AccountingProductType.CHECKING, operation.accountProductType());
+        assertEquals(new BigDecimal("100.00"), operation.amount());
+        assertEquals(new BigDecimal("10.00"), operation.commissionAmount());
     }
 
     @Test
@@ -296,9 +293,9 @@ class AccountTransactionServiceTests {
         );
     }
 
-    private AccountingEntryReqDTO capturedAccountingEntry() {
-        ArgumentCaptor<AccountingEntryReqDTO> captor = ArgumentCaptor.forClass(AccountingEntryReqDTO.class);
-        verify(accountingServiceClient).registerEntry(captor.capture());
+    private AccountingOperationReqDTO capturedAccountingOperation() {
+        ArgumentCaptor<AccountingOperationReqDTO> captor = ArgumentCaptor.forClass(AccountingOperationReqDTO.class);
+        verify(accountingServiceClient).postOperation(captor.capture());
         return captor.getValue();
     }
 

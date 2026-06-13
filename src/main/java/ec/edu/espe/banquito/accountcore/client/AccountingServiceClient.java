@@ -1,9 +1,8 @@
 package ec.edu.espe.banquito.accountcore.client;
 
-import ec.edu.espe.banquito.accountcore.dto.AccountingEntryReqDTO;
-import ec.edu.espe.banquito.accountcore.grpc.accounting.AccountingEntryRequest;
+import ec.edu.espe.banquito.accountcore.dto.AccountingOperationReqDTO;
+import ec.edu.espe.banquito.accountcore.grpc.accounting.AccountingOperationRequest;
 import ec.edu.espe.banquito.accountcore.grpc.accounting.AccountingServiceGrpc;
-import ec.edu.espe.banquito.accountcore.grpc.accounting.JournalLine;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import jakarta.annotation.PreDestroy;
@@ -28,10 +27,10 @@ public class AccountingServiceClient {
         this.accountingService = AccountingServiceGrpc.newBlockingStub(channel);
     }
 
-    public void registerEntry(AccountingEntryReqDTO request) {
+    public void postOperation(AccountingOperationReqDTO request) {
         accountingService
                 .withDeadlineAfter(5, TimeUnit.SECONDS)
-                .registerEntry(toGrpcRequest(request));
+                .postOperation(toGrpcRequest(request));
     }
 
     @PreDestroy
@@ -39,25 +38,18 @@ public class AccountingServiceClient {
         channel.shutdown();
     }
 
-    private AccountingEntryRequest toGrpcRequest(AccountingEntryReqDTO request) {
-        AccountingEntryRequest.Builder builder = AccountingEntryRequest.newBuilder()
-                .setEntryUuid(request.entryUuid())
-                .setDescription(request.description())
-                .setEntryDate(request.entryDate().toString());
-
-        request.lines().stream()
-                .map(this::toGrpcLine)
-                .forEach(builder::addLines);
-
-        return builder.build();
-    }
-
-    private JournalLine toGrpcLine(AccountingEntryReqDTO.JournalLineDTO line) {
-        return JournalLine.newBuilder()
-                .setAccountCode(line.accountCode())
-                .setMovementType(line.movementType())
-                .setAmount(line.amount().toPlainString())
-                .setReference(line.reference())
+    private AccountingOperationRequest toGrpcRequest(AccountingOperationReqDTO request) {
+        AccountingOperationRequest.Builder builder = AccountingOperationRequest.newBuilder()
+                .setOperationUuid(request.operationUuid())
+                .setOperationType(request.operationType().name())
+                .setAccountProductType(request.accountProductType().name())
+                .setAmount(request.amount().toPlainString())
+                .setReference(request.reference() == null ? "" : request.reference())
+                .setAccountingDate(request.accountingDate().toString());
+        if (request.commissionAmount() != null) {
+            builder.setCommissionAmount(request.commissionAmount().toPlainString());
+        }
+        return builder
                 .build();
     }
 }

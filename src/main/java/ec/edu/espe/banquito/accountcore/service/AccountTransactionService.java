@@ -3,7 +3,7 @@ package ec.edu.espe.banquito.accountcore.service;
 import ec.edu.espe.banquito.accountcore.client.AccountingServiceClient;
 import ec.edu.espe.banquito.accountcore.client.PartyServiceClient;
 import ec.edu.espe.banquito.accountcore.config.AccountingRulesProperties;
-import ec.edu.espe.banquito.accountcore.dto.AccountingEntryReqDTO;
+import ec.edu.espe.banquito.accountcore.dto.AccountingOperationReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.CorporateDebitReqDTO;
@@ -15,6 +15,8 @@ import ec.edu.espe.banquito.accountcore.dto.TransferP2PReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.TransferResponseDTO;
 import ec.edu.espe.banquito.accountcore.enums.AccountStatus;
 import ec.edu.espe.banquito.accountcore.enums.AccountSuperType;
+import ec.edu.espe.banquito.accountcore.enums.AccountingOperationType;
+import ec.edu.espe.banquito.accountcore.enums.AccountingProductType;
 import ec.edu.espe.banquito.accountcore.enums.TransactionStatus;
 import ec.edu.espe.banquito.accountcore.enums.TransactionSubtypeCode;
 import ec.edu.espe.banquito.accountcore.enums.TransactionType;
@@ -112,14 +114,14 @@ public class AccountTransactionService {
                 )
         ));
 
-        accountingServiceClient.registerEntry(new AccountingEntryReqDTO(
+        accountingServiceClient.postOperation(new AccountingOperationReqDTO(
                 request.transactionUuid(),
-                "Teller deposit account " + account.getId(),
-                accountingDate,
-                List.of(
-                        journalLine(accountingRules.vaultAccountCode(), TransactionType.DEBITO, request.amount(), request.transactionUuid()),
-                        journalLine(getCustomerLiabilityAccountCode(account), TransactionType.CREDITO, request.amount(), request.transactionUuid())
-                )
+                AccountingOperationType.TELLER_DEPOSIT,
+                getAccountingProductType(account),
+                request.amount(),
+                null,
+                descriptionOrDefault(request.reference(), "Teller deposit account " + account.getId()),
+                accountingDate
         ));
 
         return toOperationResponse(transaction, account.getAvailableBalance());
@@ -151,14 +153,14 @@ public class AccountTransactionService {
                 )
         ));
 
-        accountingServiceClient.registerEntry(new AccountingEntryReqDTO(
+        accountingServiceClient.postOperation(new AccountingOperationReqDTO(
                 request.transactionUuid(),
-                "Teller withdrawal account " + account.getId(),
-                accountingDate,
-                List.of(
-                        journalLine(getCustomerLiabilityAccountCode(account), TransactionType.DEBITO, request.amount(), request.transactionUuid()),
-                        journalLine(accountingRules.vaultAccountCode(), TransactionType.CREDITO, request.amount(), request.transactionUuid())
-                )
+                AccountingOperationType.TELLER_WITHDRAWAL,
+                getAccountingProductType(account),
+                request.amount(),
+                null,
+                descriptionOrDefault(request.reference(), "Teller withdrawal account " + account.getId()),
+                accountingDate
         ));
 
         return toOperationResponse(transaction, account.getAvailableBalance());
@@ -212,14 +214,17 @@ public class AccountTransactionService {
                 )
         ));
 
-        accountingServiceClient.registerEntry(new AccountingEntryReqDTO(
+        accountingServiceClient.postOperation(new AccountingOperationReqDTO(
                 request.transactionUuid(),
-                "Internal P2P transfer " + sourceAccount.getAccountNumber() + " to " + destinationAccount.getAccountNumber(),
-                accountingDate,
-                List.of(
-                        journalLine(getCustomerLiabilityAccountCode(sourceAccount), TransactionType.DEBITO, request.amount(), request.transactionUuid()),
-                        journalLine(getCustomerLiabilityAccountCode(destinationAccount), TransactionType.CREDITO, request.amount(), request.transactionUuid())
-                )
+                AccountingOperationType.P2P_TRANSFER,
+                getAccountingProductType(sourceAccount),
+                request.amount(),
+                BigDecimal.ZERO,
+                descriptionOrDefault(
+                        request.reference(),
+                        "Internal P2P transfer " + sourceAccount.getAccountNumber()
+                                + " to " + destinationAccount.getAccountNumber()),
+                accountingDate
         ));
 
         return new TransferResponseDTO(
@@ -260,14 +265,16 @@ public class AccountTransactionService {
                     )
             ));
 
-            accountingServiceClient.registerEntry(new AccountingEntryReqDTO(
+            accountingServiceClient.postOperation(new AccountingOperationReqDTO(
                     creditItem.transactionUuid(),
-                    "Batch credit " + request.batchId() + " account " + account.getId(),
-                    accountingDate,
-                    List.of(
-                            journalLine(accountingRules.paymentClearingAccountCode(), TransactionType.DEBITO, creditItem.amount(), request.batchId()),
-                            journalLine(getCustomerLiabilityAccountCode(account), TransactionType.CREDITO, creditItem.amount(), creditItem.transactionUuid())
-                    )
+                    AccountingOperationType.BATCH_CREDIT,
+                    getAccountingProductType(account),
+                    creditItem.amount(),
+                    BigDecimal.ZERO,
+                    descriptionOrDefault(
+                            creditItem.reference(),
+                            "Batch credit " + request.batchId() + " account " + account.getId()),
+                    accountingDate
             ));
 
             results.add(new BatchCreditResponseDTO.BatchCreditResultDTO(
@@ -312,16 +319,14 @@ public class AccountTransactionService {
                 )
         ));
 
-        accountingServiceClient.registerEntry(new AccountingEntryReqDTO(
+        accountingServiceClient.postOperation(new AccountingOperationReqDTO(
                 request.transactionUuid(),
+                AccountingOperationType.CORPORATE_DEBIT,
+                getAccountingProductType(account),
+                request.totalAmount(),
+                commissionNet,
                 "Corporate debit batch " + request.batchId(),
-                accountingDate,
-                List.of(
-                        journalLine(getCustomerLiabilityAccountCode(account), TransactionType.DEBITO, debitedAmount, request.transactionUuid()),
-                        journalLine(accountingRules.paymentClearingAccountCode(), TransactionType.CREDITO, request.totalAmount(), request.batchId()),
-                        journalLine(accountingRules.serviceIncomeAccountCode(), TransactionType.CREDITO, commissionNet, request.transactionUuid()),
-                        journalLine(accountingRules.vatPayableAccountCode(), TransactionType.CREDITO, ivaAmount, request.transactionUuid())
-                )
+                accountingDate
         ));
 
         return new CorporateDebitResponseDTO(
@@ -397,18 +402,11 @@ public class AccountTransactionService {
         );
     }
 
-    private AccountingEntryReqDTO.JournalLineDTO journalLine(String accountCode,
-                                                             TransactionType movementType,
-                                                             BigDecimal amount,
-                                                             String reference) {
-        return new AccountingEntryReqDTO.JournalLineDTO(accountCode, movementType.name(), amount, reference);
-    }
-
-    private String getCustomerLiabilityAccountCode(Account account) {
+    private AccountingProductType getAccountingProductType(Account account) {
         AccountSuperType superType = account.getAccountSubtype().getSuperType();
         return switch (superType) {
-            case AHORROS -> accountingRules.savingsLiabilityAccountCode();
-            case CORRIENTE -> accountingRules.checkingLiabilityAccountCode();
+            case AHORROS -> AccountingProductType.SAVINGS;
+            case CORRIENTE -> AccountingProductType.CHECKING;
         };
     }
 
