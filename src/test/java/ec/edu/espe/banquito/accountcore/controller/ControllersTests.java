@@ -16,6 +16,7 @@ import ec.edu.espe.banquito.accountcore.dto.TransferResponseDTO;
 import ec.edu.espe.banquito.accountcore.enums.AccountStatus;
 import ec.edu.espe.banquito.accountcore.model.Account;
 import ec.edu.espe.banquito.accountcore.repository.AccountRepository;
+import ec.edu.espe.banquito.accountcore.repository.AccountSubtypeRepository;
 import ec.edu.espe.banquito.accountcore.service.AccountQueryService;
 import ec.edu.espe.banquito.accountcore.service.AccountTransactionService;
 import ec.edu.espe.banquito.accountcore.service.CalendarQueryService;
@@ -53,7 +54,7 @@ class ControllersTests {
     @Test
     void delegatesHolidayCheck() {
         CalendarQueryService service = mock(CalendarQueryService.class);
-        CalendarController controller = new CalendarController(service);
+        CalendarController controller = new CalendarController(service, mock(ec.edu.espe.banquito.accountcore.service.AccountingDateService.class));
         LocalDate date = LocalDate.of(2026, Month.DECEMBER, 25);
         HolidayCheckResponseDTO expected = new HolidayCheckResponseDTO(date, true, "Navidad", false);
         when(service.checkHoliday(date)).thenReturn(expected);
@@ -85,15 +86,17 @@ class ControllersTests {
     @Test
     void returnsCustomerAccountsAndBalance() {
         AccountRepository repository = mock(AccountRepository.class);
+        AccountSubtypeRepository subtypeRepository = mock(AccountSubtypeRepository.class);
         AccountQueryService queryService = mock(AccountQueryService.class);
         AccountTransactionService transactionService = mock(AccountTransactionService.class);
-        AccountController controller = new AccountController(repository, queryService, transactionService);
+        AccountController controller = new AccountController(repository, subtypeRepository, queryService, transactionService, mock(ec.edu.espe.banquito.accountcore.service.AccountOpenService.class), mock(ec.edu.espe.banquito.accountcore.service.AccountStatusService.class));
         Account account = account();
         when(repository.findByCustomerIdOrderByAccountNumberAsc(1L)).thenReturn(List.of(account));
         when(repository.findById(1L)).thenReturn(Optional.of(account));
+        when(queryService.resolveAccount("1")).thenReturn(account);
 
         var accounts = controller.getAccountsByCustomer(1L).getBody();
-        var balance = controller.getBalance(1L).getBody();
+        var balance = controller.getBalance("1").getBody();
 
         assertEquals("2200000001", accounts.getFirst().accountNumber());
         assertEquals(new BigDecimal("100.00"), balance.availableBalance());
@@ -102,9 +105,10 @@ class ControllersTests {
     @Test
     void delegatesFavoriteHistoryAndTransactions() {
         AccountRepository repository = mock(AccountRepository.class);
+        AccountSubtypeRepository subtypeRepository = mock(AccountSubtypeRepository.class);
         AccountQueryService queryService = mock(AccountQueryService.class);
         AccountTransactionService transactionService = mock(AccountTransactionService.class);
-        AccountController controller = new AccountController(repository, queryService, transactionService);
+        AccountController controller = new AccountController(repository, subtypeRepository, queryService, transactionService, mock(ec.edu.espe.banquito.accountcore.service.AccountOpenService.class), mock(ec.edu.espe.banquito.accountcore.service.AccountStatusService.class));
         FavoriteAccountResponseDTO favorite = mock(FavoriteAccountResponseDTO.class);
         TransactionHistoryDTO history = mock(TransactionHistoryDTO.class);
         OperationResponseDTO operation = mock(OperationResponseDTO.class);
@@ -114,6 +118,7 @@ class ControllersTests {
         TransferP2PReqDTO transferRequest =
                 new TransferP2PReqDTO(1L, "2200000002", BigDecimal.TEN, "transfer", null);
         when(queryService.getFavoriteAccount(1L)).thenReturn(favorite);
+        when(queryService.resolveAccount("1")).thenReturn(account());
         when(transactionService.getTransactionHistory(
                 any(Long.class), any(), any(), any(Pageable.class))).thenReturn(history);
         when(transactionService.executeDeposit(tellerRequest)).thenReturn(operation);
@@ -121,7 +126,7 @@ class ControllersTests {
         when(transactionService.executeP2PTransfer(transferRequest)).thenReturn(transfer);
 
         assertSame(favorite, controller.getFavoriteAccount(1L).getBody());
-        assertSame(history, controller.getTransactions(1L, 0, 20, null, null).getBody());
+        assertSame(history, controller.getTransactions("1", 0, 20, null, null).getBody());
         assertSame(operation, controller.tellerDeposit(tellerRequest).getBody());
         assertSame(operation, controller.tellerWithdrawal(tellerRequest).getBody());
         assertSame(transfer, controller.transferP2P(transferRequest).getBody());

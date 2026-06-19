@@ -2,6 +2,7 @@ package ec.edu.espe.banquito.accountcore.service;
 
 import ec.edu.espe.banquito.accountcore.client.AccountingServiceClient;
 import ec.edu.espe.banquito.accountcore.client.PartyServiceClient;
+import ec.edu.espe.banquito.accountcore.config.AccountingRulesProperties;
 import ec.edu.espe.banquito.accountcore.dto.AccountingOperationReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.AccountingOperationResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditReqDTO;
@@ -64,6 +65,12 @@ class AccountTransactionServiceTests {
     private AccountingServiceClient accountingServiceClient;
     @Mock
     private PartyServiceClient partyServiceClient;
+    @Mock
+    private ec.edu.espe.banquito.accountcore.client.NotificationGrpcClient notificationGrpcClient;
+    @Mock
+    private AccountingRulesProperties rules;
+    @Mock
+    private AccountingDateService accountingDateService;
 
     private AccountTransactionService service;
 
@@ -74,9 +81,14 @@ class AccountTransactionServiceTests {
                 transactionRepository,
                 transactionSubtypeRepository,
                 accountingServiceClient,
-                partyServiceClient
+                partyServiceClient,
+                notificationGrpcClient,
+                rules,
+                accountingDateService
         );
 
+        lenient().when(accountingDateService.resolveAccountingDate())
+                .thenReturn(LocalDate.of(2026, 6, 17));
         lenient().when(transactionRepository.existsByTransactionUuidAndTransactionDateAfter(anyString(), any()))
                 .thenReturn(false);
         lenient().when(transactionSubtypeRepository.findByCode(anyString()))

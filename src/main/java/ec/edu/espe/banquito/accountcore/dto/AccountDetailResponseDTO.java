@@ -3,14 +3,18 @@ package ec.edu.espe.banquito.accountcore.dto;
 import ec.edu.espe.banquito.accountcore.enums.AccountStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
-public record AccountSummaryResponseDTO(
+public record AccountDetailResponseDTO(
         Long accountId,
         String accountNumber,
         Long customerId,
-        AccountStatus status,
+        String customerFullName,
+        String accountSubtypeDescription,
+        Integer branchId,
+        String branchName,
         BigDecimal availableBalance,
         BigDecimal accountingBalance,
-        String currency,
-        Integer branchId
+        AccountStatus status,
+        LocalDate openingDate
 ) {}

@@ -1,6 +1,8 @@
 package ec.edu.espe.banquito.accountcore.controller;
 
+import ec.edu.espe.banquito.accountcore.dto.AccountingDateResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.HolidayCheckResponseDTO;
+import ec.edu.espe.banquito.accountcore.service.AccountingDateService;
 import ec.edu.espe.banquito.accountcore.service.CalendarQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,9 +25,26 @@ import java.time.LocalDate;
 public class CalendarController {
 
     private final CalendarQueryService calendarQueryService;
+    private final AccountingDateService accountingDateService;
 
-    public CalendarController(CalendarQueryService calendarQueryService) {
+    public CalendarController(CalendarQueryService calendarQueryService,
+                              AccountingDateService accountingDateService) {
         this.calendarQueryService = calendarQueryService;
+        this.accountingDateService = accountingDateService;
+    }
+
+    @GetMapping("/accounting-date")
+    @Operation(summary = "Get active accounting date",
+            description = "Returns the current effective ACCOUNTING_DATE according to the EOD cut-off rule. " +
+                    "If the bank time is past the cut-off, the date is the next business day.")
+    @ApiResponse(responseCode = "200", description = "Accounting date returned",
+            content = @Content(schema = @Schema(implementation = AccountingDateResponseDTO.class)))
+    public ResponseEntity<AccountingDateResponseDTO> getAccountingDate() {
+        return ResponseEntity.ok(new AccountingDateResponseDTO(
+                accountingDateService.resolveAccountingDate(),
+                accountingDateService.getCutOffTime(),
+                accountingDateService.isPastCutOff()
+        ));
     }
 
     @GetMapping("/holidays/check")

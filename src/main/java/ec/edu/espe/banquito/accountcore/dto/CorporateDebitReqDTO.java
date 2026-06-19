@@ -12,7 +12,7 @@ public record CorporateDebitReqDTO(
         String accountNumber,
 
         @NotNull(message = "Total amount is required")
-        @Positive(message = "Total amount must be greater than zero")
+        @PositiveOrZero(message = "Total amount must be zero or greater")
         BigDecimal totalAmount,
 
         @NotNull(message = "Commission amount is required")

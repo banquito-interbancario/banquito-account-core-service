@@ -5,6 +5,7 @@ public enum TransactionSubtypeCode {
     RET_VEN,
     PAG_NOM_C,
     DEB_EMP,
+    DEV_EMP,   // RF-03: Devolución a empresa por líneas rechazadas del lote
     TRF_P2P_S,
     TRF_P2P_E
 }

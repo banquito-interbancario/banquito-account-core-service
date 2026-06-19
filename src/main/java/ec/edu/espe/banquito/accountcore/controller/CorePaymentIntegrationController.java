@@ -4,6 +4,8 @@ import ec.edu.espe.banquito.accountcore.dto.BatchCreditReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.CorporateDebitReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.CorporateDebitResponseDTO;
+import ec.edu.espe.banquito.accountcore.dto.CorporateRefundReqDTO;
+import ec.edu.espe.banquito.accountcore.dto.CorporateRefundResponseDTO;
 import ec.edu.espe.banquito.accountcore.service.AccountTransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -50,5 +52,17 @@ public class CorePaymentIntegrationController {
     @ApiResponse(responseCode = "503", description = "Required core gRPC service unavailable")
     public ResponseEntity<CorporateDebitResponseDTO> corporateDebit(@Valid @RequestBody CorporateDebitReqDTO request) {
         return ResponseEntity.ok(transactionService.executeCorporateDebit(request));
+    }
+
+    @PostMapping("/corporate-refund")
+    @Operation(summary = "Process corporate refund",
+            description = "RF-03: Credits a corporate account with the amount of rejected batch lines (devolución).")
+    @ApiResponse(responseCode = "200", description = "Corporate refund processed",
+            content = @Content(schema = @Schema(implementation = CorporateRefundResponseDTO.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid request or inactive account")
+    @ApiResponse(responseCode = "404", description = "Account not found")
+    @ApiResponse(responseCode = "409", description = "Duplicated transaction UUID")
+    public ResponseEntity<CorporateRefundResponseDTO> corporateRefund(@Valid @RequestBody CorporateRefundReqDTO request) {
+        return ResponseEntity.ok(transactionService.executeCorporateRefund(request));
     }
 }

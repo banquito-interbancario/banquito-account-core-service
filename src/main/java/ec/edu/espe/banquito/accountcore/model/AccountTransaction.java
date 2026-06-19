@@ -20,7 +20,10 @@ import java.util.Objects;
 public class AccountTransaction {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "acct_tx_seq")
+    @SequenceGenerator(name = "acct_tx_seq",
+            sequenceName = "account_core.account_transaction_id_seq",
+            allocationSize = 1)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

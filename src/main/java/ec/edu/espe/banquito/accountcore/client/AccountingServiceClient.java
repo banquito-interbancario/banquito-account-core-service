@@ -59,6 +59,9 @@ public class AccountingServiceClient {
         if (request.commissionAmount() != null) {
             builder.setCommissionAmount(request.commissionAmount().toPlainString());
         }
+        if (request.ivaAmount() != null && request.ivaAmount().compareTo(BigDecimal.ZERO) > 0) {
+            builder.setIvaAmount(request.ivaAmount().toPlainString());
+        }
         return builder.build();
     }
 

@@ -2,12 +2,16 @@ package ec.edu.espe.banquito.accountcore.service;
 
 import ec.edu.espe.banquito.accountcore.client.AccountingServiceClient;
 import ec.edu.espe.banquito.accountcore.client.PartyServiceClient;
+import ec.edu.espe.banquito.accountcore.client.NotificationGrpcClient;
+import ec.edu.espe.banquito.accountcore.config.AccountingRulesProperties;
 import ec.edu.espe.banquito.accountcore.dto.AccountingOperationReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.AccountingOperationResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.CorporateDebitReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.CorporateDebitResponseDTO;
+import ec.edu.espe.banquito.accountcore.dto.CorporateRefundReqDTO;
+import ec.edu.espe.banquito.accountcore.dto.CorporateRefundResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.OperationResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.TellerTransactionReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.TransactionHistoryDTO;
@@ -38,6 +42,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,17 +58,26 @@ public class AccountTransactionService {
     private final TransactionSubtypeRepository transactionSubtypeRepository;
     private final AccountingServiceClient accountingServiceClient;
     private final PartyServiceClient partyServiceClient;
+    private final NotificationGrpcClient notificationGrpcClient;
+    private final AccountingRulesProperties accountingRules;
+    private final AccountingDateService accountingDateService;
 
     public AccountTransactionService(AccountRepository accountRepository,
                                      AccountTransactionRepository transactionRepository,
                                      TransactionSubtypeRepository transactionSubtypeRepository,
                                      AccountingServiceClient accountingServiceClient,
-                                     PartyServiceClient partyServiceClient) {
+                                     PartyServiceClient partyServiceClient,
+                                     NotificationGrpcClient notificationGrpcClient,
+                                     AccountingRulesProperties accountingRules,
+                                     AccountingDateService accountingDateService) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.transactionSubtypeRepository = transactionSubtypeRepository;
         this.accountingServiceClient = accountingServiceClient;
         this.partyServiceClient = partyServiceClient;
+        this.notificationGrpcClient = notificationGrpcClient;
+        this.accountingRules = accountingRules;
+        this.accountingDateService = accountingDateService;
     }
 
     @Transactional(readOnly = true)
@@ -96,7 +111,7 @@ public class AccountTransactionService {
         credit(account, request.amount());
         accountRepository.save(account);
 
-        LocalDate accountingDate = LocalDate.now(BANK_ZONE);
+        LocalDate accountingDate = accountingDateService.resolveAccountingDate();
         AccountTransaction transaction = transactionRepository.save(createTransaction(
                 account,
                 new TransactionCreationData(
@@ -121,6 +136,8 @@ public class AccountTransactionService {
                 accountingDate
         ));
 
+        notifyTransaction(account, TransactionType.CREDITO, request.amount(), account.getAvailableBalance());
+
         return toOperationResponse(transaction, account.getAvailableBalance());
     }
 
@@ -136,7 +153,7 @@ public class AccountTransactionService {
         debit(account, request.amount());
         accountRepository.save(account);
 
-        LocalDate accountingDate = LocalDate.now(BANK_ZONE);
+        LocalDate accountingDate = accountingDateService.resolveAccountingDate();
         AccountTransaction transaction = transactionRepository.save(createTransaction(
                 account,
                 new TransactionCreationData(
@@ -160,6 +177,8 @@ public class AccountTransactionService {
                 descriptionOrDefault(request.reference(), "Teller withdrawal account " + account.getId()),
                 accountingDate
         ));
+
+        notifyTransaction(account, TransactionType.DEBITO, request.amount(), account.getAvailableBalance());
 
         return toOperationResponse(transaction, account.getAvailableBalance());
     }
@@ -186,7 +205,7 @@ public class AccountTransactionService {
         accountRepository.save(sourceAccount);
         accountRepository.save(destinationAccount);
 
-        LocalDate accountingDate = LocalDate.now(BANK_ZONE);
+        LocalDate accountingDate = accountingDateService.resolveAccountingDate();
         AccountTransaction debitTransaction = transactionRepository.save(createTransaction(
                 sourceAccount,
                 new TransactionCreationData(
@@ -250,7 +269,7 @@ public class AccountTransactionService {
             credit(account, creditItem.amount());
             accountRepository.save(account);
 
-            LocalDate accountingDate = LocalDate.now(BANK_ZONE);
+            LocalDate accountingDate = accountingDateService.resolveAccountingDate();
             transactionRepository.save(createTransaction(
                     account,
                     new TransactionCreationData(
@@ -294,9 +313,15 @@ public class AccountTransactionService {
         Account account = getAccountForUpdate(request.accountNumber());
         validateActiveAccount(account);
         partyServiceClient.validateActiveCustomer(account.getCustomerId());
-        validateSufficientBalance(account, request.totalAmount().add(request.commissionAmount()));
 
-        LocalDate accountingDate = LocalDate.now(BANK_ZONE);
+        BigDecimal commissionNet = request.commissionAmount();
+        BigDecimal ivaAmount = BigDecimal.ZERO;
+        if (accountingRules.isIvaEnabled() && request.commissionAmount().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal ivaRate = accountingRules.getIvaRate() != null ? accountingRules.getIvaRate() : new BigDecimal("0.15");
+            ivaAmount = request.commissionAmount().multiply(ivaRate).setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+
+        LocalDate accountingDate = accountingDateService.resolveAccountingDate();
         AccountingOperationResponseDTO accountingResult = accountingServiceClient.postOperation(
                 new AccountingOperationReqDTO(
                         request.transactionUuid(),
@@ -304,13 +329,14 @@ public class AccountTransactionService {
                         getAccountingProductType(account),
                         null,
                         request.totalAmount(),
-                        request.commissionAmount(),
+                        commissionNet,
                         "Corporate debit batch " + request.batchId(),
-                        accountingDate
+                        accountingDate,
+                        ivaAmount
                 )
         );
-        validateSufficientBalance(account, accountingResult.totalDebited());
 
+        validateSufficientBalance(account, accountingResult.totalDebited());
         debit(account, accountingResult.totalDebited());
         accountRepository.save(account);
 
@@ -332,6 +358,53 @@ public class AccountTransactionService {
                 accountingResult.totalDebited(),
                 accountingResult.commissionAmount(),
                 accountingResult.ivaAmount(),
+                transaction.getStatus(),
+                transaction.getAccountingDate()
+        );
+    }
+
+    /**
+     * RF-03: Devuelve a la cuenta corporativa el monto de las líneas rechazadas.
+     * Genera un CRÉDITO en la cuenta y un asiento contable CORPORATE_REFUND.
+     */
+    @Transactional
+    public CorporateRefundResponseDTO executeCorporateRefund(CorporateRefundReqDTO request) {
+        validateIdempotency(request.transactionUuid());
+
+        Account account = getAccountForUpdate(request.accountNumber());
+        validateActiveAccount(account);
+        partyServiceClient.validateActiveCustomer(account.getCustomerId());
+
+        credit(account, request.refundAmount());
+        accountRepository.save(account);
+
+        LocalDate accountingDate = accountingDateService.resolveAccountingDate();
+        AccountTransaction transaction = transactionRepository.save(createTransaction(
+                account,
+                new TransactionCreationData(
+                        request.refundAmount(),
+                        TransactionType.CREDITO,
+                        TransactionSubtypeCode.DEV_EMP,
+                        request.transactionUuid(),
+                        accountingDate,
+                        account.getAvailableBalance(),
+                        "Refund rejected lines batch " + request.batchId()
+                )
+        ));
+
+        accountingServiceClient.postOperation(new AccountingOperationReqDTO(
+                request.transactionUuid(),
+                AccountingOperationType.CORPORATE_REFUND,
+                getAccountingProductType(account),
+                request.refundAmount(),
+                BigDecimal.ZERO,
+                "Corporate refund batch " + request.batchId(),
+                accountingDate
+        ));
+
+        return new CorporateRefundResponseDTO(
+                transaction.getTransactionUuid(),
+                request.refundAmount(),
                 transaction.getStatus(),
                 transaction.getAccountingDate()
         );
@@ -396,8 +469,34 @@ public class AccountTransactionService {
                 transaction.getAccountingDate(),
                 newBalance,
                 transaction.getStatus(),
-                transaction.getTransactionDate()
+                LocalDateTime.now(BANK_ZONE)
         );
+    }
+
+    private void notifyTransaction(Account account, TransactionType type, BigDecimal amount, BigDecimal newBalance) {
+        try {
+            String email = this.partyServiceClient.getCustomerEmail(account.getCustomerId());
+            if (email == null || email.isBlank()) {
+                return;
+            }
+            String customerName = this.partyServiceClient.getHolderNameByAccount(account.getAccountNumber());
+
+            this.notificationGrpcClient.sendNotification(
+                    email,
+                    "BanQuito - " + (type == TransactionType.CREDITO ? "Depósito" : "Retiro") + " en tu cuenta " + account.getAccountNumber(),
+                    "TRANSACTION_EXECUTED",
+                    Map.of(
+                            "customerName", customerName != null ? customerName : "",
+                            "accountNumber", account.getAccountNumber(),
+                            "transactionType", type.name(),
+                            "amount", amount.toPlainString(),
+                            "newBalance", newBalance.toPlainString(),
+                            "date", LocalDate.now().toString()
+                    )
+            );
+        } catch (Exception ignored) {
+            // No bloquear la transacción si la notificación falla.
+        }
     }
 
     private AccountingProductType getAccountingProductType(Account account) {
@@ -427,4 +526,3 @@ public class AccountTransactionService {
             String description
     ) {}
 }
-

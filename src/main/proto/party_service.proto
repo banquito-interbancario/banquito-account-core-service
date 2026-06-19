@@ -9,6 +9,7 @@ option java_outer_classname = "PartyServiceProto";
 service PartyService {
   rpc GetCustomer(GetCustomerRequest) returns (CustomerResponse);
   rpc GetCustomerByAccount(GetCustomerByAccountRequest) returns (AccountHolderResponse);
+  rpc GetBranch(GetBranchRequest) returns (BranchResponse);
 }
 
 message GetCustomerRequest {
@@ -17,6 +18,17 @@ message GetCustomerRequest {
 
 message GetCustomerByAccountRequest {
   string account_number = 1;
+}
+
+message GetBranchRequest {
+  int32 branch_id = 1;
+}
+
+message BranchResponse {
+  int32 branch_id = 1;
+  string branch_code = 2;
+  string name = 3;
+  string city = 4;
 }
 
 message CustomerResponse {

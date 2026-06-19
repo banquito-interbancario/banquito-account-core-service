@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v2/auth")
 @Tag(name = "Authentication", description = "Staff authentication for teller operations.")
+@org.springframework.web.bind.annotation.CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AuthController {
 
     private final CoreUserAuthService coreUserAuthService;

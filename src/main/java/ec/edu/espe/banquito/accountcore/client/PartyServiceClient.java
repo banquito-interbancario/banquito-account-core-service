@@ -1,6 +1,8 @@
 package ec.edu.espe.banquito.accountcore.client;
 
+import ec.edu.espe.banquito.accountcore.grpc.party.BranchResponse;
 import ec.edu.espe.banquito.accountcore.grpc.party.CustomerResponse;
+import ec.edu.espe.banquito.accountcore.grpc.party.GetBranchRequest;
 import ec.edu.espe.banquito.accountcore.grpc.party.GetCustomerByAccountRequest;
 import ec.edu.espe.banquito.accountcore.grpc.party.GetCustomerRequest;
 import ec.edu.espe.banquito.accountcore.grpc.party.PartyServiceGrpc;
@@ -42,6 +44,23 @@ public class PartyServiceClient {
                 .withDeadlineAfter(5, TimeUnit.SECONDS)
                 .getCustomerByAccount(GetCustomerByAccountRequest.newBuilder().setAccountNumber(accountNumber).build())
                 .getHolderName();
+    }
+
+    public BranchResponse getBranch(Integer branchId) {
+        return partyService
+                .withDeadlineAfter(5, TimeUnit.SECONDS)
+                .getBranch(GetBranchRequest.newBuilder().setBranchId(branchId).build());
+    }
+
+    public String getCustomerEmail(Long customerId) {
+        try {
+            CustomerResponse customer = partyService
+                    .withDeadlineAfter(5, TimeUnit.SECONDS)
+                    .getCustomer(GetCustomerRequest.newBuilder().setCustomerId(customerId).build());
+            return customer.getEmail();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @PreDestroy
