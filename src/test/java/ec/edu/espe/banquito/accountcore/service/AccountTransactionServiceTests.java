@@ -2,7 +2,6 @@ package ec.edu.espe.banquito.accountcore.service;
 
 import ec.edu.espe.banquito.accountcore.client.AccountingServiceClient;
 import ec.edu.espe.banquito.accountcore.client.PartyServiceClient;
-import ec.edu.espe.banquito.accountcore.config.AccountingRulesProperties;
 import ec.edu.espe.banquito.accountcore.dto.AccountingOperationReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.AccountingOperationResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditReqDTO;
@@ -68,8 +67,6 @@ class AccountTransactionServiceTests {
     @Mock
     private ec.edu.espe.banquito.accountcore.client.NotificationGrpcClient notificationGrpcClient;
     @Mock
-    private AccountingRulesProperties rules;
-    @Mock
     private AccountingDateService accountingDateService;
 
     private AccountTransactionService service;
@@ -83,7 +80,6 @@ class AccountTransactionServiceTests {
                 accountingServiceClient,
                 partyServiceClient,
                 notificationGrpcClient,
-                rules,
                 accountingDateService
         );
 

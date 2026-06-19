@@ -3,7 +3,6 @@ package ec.edu.espe.banquito.accountcore.service;
 import ec.edu.espe.banquito.accountcore.client.AccountingServiceClient;
 import ec.edu.espe.banquito.accountcore.client.PartyServiceClient;
 import ec.edu.espe.banquito.accountcore.client.NotificationGrpcClient;
-import ec.edu.espe.banquito.accountcore.config.AccountingRulesProperties;
 import ec.edu.espe.banquito.accountcore.dto.AccountingOperationReqDTO;
 import ec.edu.espe.banquito.accountcore.dto.AccountingOperationResponseDTO;
 import ec.edu.espe.banquito.accountcore.dto.BatchCreditReqDTO;
@@ -59,7 +58,6 @@ public class AccountTransactionService {
     private final AccountingServiceClient accountingServiceClient;
     private final PartyServiceClient partyServiceClient;
     private final NotificationGrpcClient notificationGrpcClient;
-    private final AccountingRulesProperties accountingRules;
     private final AccountingDateService accountingDateService;
 
     public AccountTransactionService(AccountRepository accountRepository,
@@ -68,7 +66,6 @@ public class AccountTransactionService {
                                      AccountingServiceClient accountingServiceClient,
                                      PartyServiceClient partyServiceClient,
                                      NotificationGrpcClient notificationGrpcClient,
-                                     AccountingRulesProperties accountingRules,
                                      AccountingDateService accountingDateService) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
@@ -76,7 +73,6 @@ public class AccountTransactionService {
         this.accountingServiceClient = accountingServiceClient;
         this.partyServiceClient = partyServiceClient;
         this.notificationGrpcClient = notificationGrpcClient;
-        this.accountingRules = accountingRules;
         this.accountingDateService = accountingDateService;
     }
 
@@ -314,13 +310,6 @@ public class AccountTransactionService {
         validateActiveAccount(account);
         partyServiceClient.validateActiveCustomer(account.getCustomerId());
 
-        BigDecimal commissionNet = request.commissionAmount();
-        BigDecimal ivaAmount = BigDecimal.ZERO;
-        if (accountingRules.isIvaEnabled() && request.commissionAmount().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal ivaRate = accountingRules.getIvaRate() != null ? accountingRules.getIvaRate() : new BigDecimal("0.15");
-            ivaAmount = request.commissionAmount().multiply(ivaRate).setScale(2, java.math.RoundingMode.HALF_UP);
-        }
-
         LocalDate accountingDate = accountingDateService.resolveAccountingDate();
         AccountingOperationResponseDTO accountingResult = accountingServiceClient.postOperation(
                 new AccountingOperationReqDTO(
@@ -329,10 +318,9 @@ public class AccountTransactionService {
                         getAccountingProductType(account),
                         null,
                         request.totalAmount(),
-                        commissionNet,
+                        request.commissionAmount(),
                         "Corporate debit batch " + request.batchId(),
-                        accountingDate,
-                        ivaAmount
+                        accountingDate
                 )
         );
 
