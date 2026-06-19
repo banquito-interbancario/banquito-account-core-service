@@ -56,38 +56,14 @@ public class CoreUserAuthService {
                 coreUser.getUsername(),
                 coreUser.getFullName(),
                 coreUser.getRole(),
-                resolveBranchId(coreUser),
-                resolveBranchCode(coreUser),
+                coreUser.getBranchId(),
+                coreUser.getBranchCode(),
                 coreUser.getStatus()
         );
     }
 
     private boolean isValidStaff(CoreUser coreUser) {
-        return (TELLER_ROLE.equals(coreUser.getRole()) || OPERATOR_ROLE.equals(coreUser.getRole())) 
+        return (TELLER_ROLE.equals(coreUser.getRole()) || OPERATOR_ROLE.equals(coreUser.getRole()))
                && ACTIVE_STATUS.equals(coreUser.getStatus());
-    }
-
-    private Integer resolveBranchId(CoreUser coreUser) {
-        if (coreUser.getBranchId() != null) {
-            return coreUser.getBranchId();
-        }
-        String username = coreUser.getUsername().toLowerCase();
-        if (username.contains("norte") || username.contains("anahy") || username.contains("bryan")) return 1;
-        if (username.contains("sur") || username.contains("oscar") || username.contains("paul")) return 2;
-        if (username.contains("centro") || username.contains("anthony") || username.contains("johan")) return 3;
-        if (username.contains("valles") || username.contains("santiago") || username.contains("alan")) return 4;
-        return 1;
-    }
-
-    private String resolveBranchCode(CoreUser coreUser) {
-        if (coreUser.getBranchCode() != null) {
-            return coreUser.getBranchCode();
-        }
-        String username = coreUser.getUsername().toLowerCase();
-        if (username.contains("norte") || username.contains("anahy") || username.contains("bryan")) return "NORTE";
-        if (username.contains("sur") || username.contains("oscar") || username.contains("paul")) return "SUR";
-        if (username.contains("centro") || username.contains("anthony") || username.contains("johan")) return "CENTRO";
-        if (username.contains("valles") || username.contains("santiago") || username.contains("alan")) return "VALLES";
-        return "MATRIZ";
     }
 }
