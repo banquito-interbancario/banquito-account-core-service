@@ -13,12 +13,15 @@ import java.util.UUID;
 public class ClearingPublisher {
 
     private final RabbitTemplate rabbitTemplate;
-    private final String clearingQueue;
+    private final String clearingExchange;
+    private final String clearingRoutingKey;
 
     public ClearingPublisher(RabbitTemplate rabbitTemplate,
-                             @Value("${app.rabbitmq.clearing-queue:clearing.outbound.queue}") String clearingQueue) {
+                             @Value("${app.rabbitmq.clearing-exchange:clearing.exchange}") String clearingExchange,
+                             @Value("${app.rabbitmq.clearing-routing-key:clearing.outbound}") String clearingRoutingKey) {
         this.rabbitTemplate = rabbitTemplate;
-        this.clearingQueue = clearingQueue;
+        this.clearingExchange = clearingExchange;
+        this.clearingRoutingKey = clearingRoutingKey;
     }
 
     public void publishExternalTransfer(String originAccountNumber, String externalBankCode,
@@ -35,6 +38,6 @@ public class ClearingPublisher {
         message.setConcept(concept);
         message.setValueDate(LocalDate.now());
 
-        rabbitTemplate.convertAndSend(clearingQueue, message);
+        rabbitTemplate.convertAndSend(clearingExchange, clearingRoutingKey, message);
     }
 }
