@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface AccountTransactionRepository extends JpaRepository<AccountTransaction, Long> {
     boolean existsByTransactionUuidAndTransactionDateAfter(String uuid, LocalDateTime date);
@@ -26,4 +27,12 @@ public interface AccountTransactionRepository extends JpaRepository<AccountTrans
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
             Pageable pageable);
+
+    @Query("""
+            select transaction
+            from AccountTransaction transaction
+            where transaction.accountingDate = :accountingDate
+            order by transaction.id asc
+            """)
+    List<AccountTransaction> findAllByAccountingDate(@Param("accountingDate") LocalDate accountingDate);
 }
