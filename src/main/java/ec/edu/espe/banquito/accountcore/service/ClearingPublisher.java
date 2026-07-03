@@ -1,8 +1,8 @@
 package ec.edu.espe.banquito.accountcore.service;
 
 import ec.edu.espe.banquito.accountcore.dto.OffUsPaymentMessage;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -15,16 +15,13 @@ public class ClearingPublisher {
 
     private static final ZoneId BANK_ZONE = ZoneId.of("America/Guayaquil");
 
-    private final RabbitTemplate rabbitTemplate;
-    private final String clearingExchange;
-    private final String clearingRoutingKey;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final String clearingTopic;
 
-    public ClearingPublisher(RabbitTemplate rabbitTemplate,
-                             @Value("${app.rabbitmq.clearing-exchange:clearing.exchange}") String clearingExchange,
-                             @Value("${app.rabbitmq.clearing-routing-key:clearing.outbound}") String clearingRoutingKey) {
-        this.rabbitTemplate = rabbitTemplate;
-        this.clearingExchange = clearingExchange;
-        this.clearingRoutingKey = clearingRoutingKey;
+    public ClearingPublisher(KafkaTemplate<String, Object> kafkaTemplate,
+                             @Value("${app.kafka.clearing-topic:clearing-outbound}") String clearingTopic) {
+        this.kafkaTemplate = kafkaTemplate;
+        this.clearingTopic = clearingTopic;
     }
 
     public void publishExternalTransfer(String originAccountNumber, String externalBankCode,
@@ -41,6 +38,6 @@ public class ClearingPublisher {
         message.setConcept(concept);
         message.setValueDate(LocalDate.now(BANK_ZONE));
 
-        rabbitTemplate.convertAndSend(clearingExchange, clearingRoutingKey, message);
+        kafkaTemplate.send(clearingTopic, message.getBatchId().toString(), message);
     }
 }
